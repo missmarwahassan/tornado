@@ -7,6 +7,10 @@ NOTEBOOK_PATH = WORKDIR / "tornado_story_dashboard.ipynb"
 HTML_PATH = WORKDIR / "tornado_story_dashboard.html"
 INDEX_PATH = WORKDIR / "index.html"
 
+PROJECT_TITLE = "Tornado Geography Beyond Classic Tornado Alley"
+COURSE_LABEL = "SI649 Narrative Visualization Project, Winter 2026"
+TEAM_LABEL = "Team: Hassan Beydoun, Marwa Hassan, Maryam Romio"
+
 
 def load_notebook_namespace() -> dict:
     nb = json.loads(NOTEBOOK_PATH.read_text())
@@ -74,49 +78,73 @@ def main() -> None:
         )
     )
 
-    hover_state = alt.selection_point(
-        name="hover_state",
-        fields=["States"],
-        on="pointerover",
-        nearest=True,
-        empty=False,
+    zoom_window = alt.selection_interval(
+        name="zoom_window",
+        bind="scales",
+        encodings=["x", "y"],
     )
 
     community_scatter_labels = (
         alt.Chart(state_metrics)
-        .add_params(hover_state)
+        .transform_filter("datum.label != ''")
         .mark_text(align="left", dx=8, dy=-5, fontSize=11, color=ink)
         .encode(
             x="avg_annual:Q",
             y="growth_delta:Q",
+            text="label:N",
+        )
+    )
+
+    zoom_labels = (
+        alt.Chart(state_metrics)
+        .transform_filter("datum.label == ''")
+        .transform_filter(zoom_window)
+        .transform_window(
+            visible_rank="rank()",
+            sort=[alt.SortField("total_count", order="descending")],
+        )
+        .transform_filter("datum.visible_rank <= 18")
+        .mark_text(align="left", dx=8, dy=10, fontSize=11, color=ink)
+        .encode(
+            x="avg_annual:Q",
+            y="growth_delta:Q",
             text="States:N",
-            opacity=alt.condition(hover_state, alt.value(1), alt.value(0)),
         )
     )
 
     community_scatter = (
-        (community_scatter_base + community_scatter_labels)
+        (community_scatter_base + community_scatter_labels + zoom_labels)
+        .add_params(zoom_window)
         .properties(
             width=980,
             height=580,
             title=alt.TitleParams(
                 text="Exposure vs. Acceleration",
-                subtitle="This view is zoomable and pannable. Drag to pan, use your trackpad or mouse wheel to zoom, and double-click to reset.",
+                subtitle="This view is zoomable and pannable. Drag to pan, use your trackpad or mouse wheel to zoom, and double-click to reset. More state labels appear automatically as you zoom in.",
                 anchor="start",
             ),
         )
-        .interactive()
         .configure(**base_config)
     )
 
     scatter_spec = community_scatter.to_dict()
+
+    map_spec["params"] = [
+        {
+            **param,
+            "value": 1951,
+        }
+        if param.get("name") == "map_year"
+        else param
+        for param in map_spec.get("params", [])
+    ]
 
     html = f"""<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Tornado Geography Project</title>
+  <title>{PROJECT_TITLE}</title>
   <script src="https://cdn.jsdelivr.net/npm/vega@5"></script>
   <script src="https://cdn.jsdelivr.net/npm/vega-lite@5"></script>
   <script src="https://cdn.jsdelivr.net/npm/vega-embed@6"></script>
@@ -178,6 +206,27 @@ def main() -> None:
       font-size: 1.08rem;
       color: rgba(31,29,26,0.84);
       margin-bottom: 30px;
+    }}
+    .meta-grid {{
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 14px;
+      margin: 18px 0 10px;
+    }}
+    .meta-card {{
+      background: rgba(255,255,255,0.58);
+      border: 1px solid rgba(216,204,184,0.8);
+      border-radius: 16px;
+      padding: 14px 16px;
+      font-family: Helvetica, Arial, sans-serif;
+    }}
+    .meta-card strong {{
+      display: block;
+      font-size: 0.82rem;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: rgba(31,29,26,0.62);
+      margin-bottom: 4px;
     }}
     .panel {{
       background: rgba(255,255,255,0.54);
@@ -275,11 +324,21 @@ def main() -> None:
   <main>
     <section class="hero">
       <p class="kicker">Final Narrative Visualization Project</p>
-      <h1>Tornado Geography Beyond Classic Tornado Alley</h1>
+      <h1>{PROJECT_TITLE}</h1>
       <p class="lede">
         This site presents our team’s final narrative visualization project on tornado activity across the United States from 1951 to 2019.
         Our goal is to show that the national tornado story is not only about a fixed Plains corridor, but also about regional change, concentration, and expansion over time.
       </p>
+      <div class="meta-grid">
+        <div class="meta-card">
+          <strong>Course</strong>
+          <span>{COURSE_LABEL}</span>
+        </div>
+        <div class="meta-card">
+          <strong>Team</strong>
+          <span>{TEAM_LABEL}</span>
+        </div>
+      </div>
       <div class="overview">
         <div class="overview-card">
           <h3>Project Goal</h3>
