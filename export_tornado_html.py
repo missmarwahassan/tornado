@@ -101,8 +101,16 @@ def main() -> None:
             alt.Chart(state_metrics)
             .mark_circle(opacity=0.9, stroke=panel_bg, strokeWidth=1.4)
             .encode(
-                x=alt.X("avg_annual:Q", title="Average annual tornadoes (1951-2019)"),
-                y=alt.Y("growth_delta:Q", title="Increase from 1950s average to 2010s average"),
+                x=alt.X(
+                    "avg_annual:Q",
+                    title="Average annual tornadoes (1951-2019)",
+                    scale=alt.Scale(domain=[-2, 142], nice=False, zero=False),
+                ),
+                y=alt.Y(
+                    "growth_delta:Q",
+                    title="Increase from 1950s average to 2010s average",
+                    scale=alt.Scale(domain=[-8, 64], nice=False, zero=False),
+                ),
                 size=alt.Size("total_count:Q", title="Total tornadoes"),
                 color=alt.Color(
                     "region:N",
