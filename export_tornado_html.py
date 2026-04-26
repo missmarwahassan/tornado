@@ -7,9 +7,9 @@ NOTEBOOK_PATH = WORKDIR / "tornado_story_dashboard.ipynb"
 HTML_PATH = WORKDIR / "tornado_story_dashboard.html"
 INDEX_PATH = WORKDIR / "index.html"
 
-PROJECT_TITLE = "Tornado Geography Beyond Classic Tornado Alley"
-COURSE_LABEL = "SI649 Narrative Visualization Project, Winter 2026"
-TEAM_LABEL = "Team: Hassan Beydoun, Marwa Hassan, Maryam Romio"
+PROJECT_TITLE = "The Changing Geography of Tornado Risk"
+COURSE_LABEL = "SI 649: Information Visualization"
+TEAM_LABEL = "Marwa Hassan, Hassan Beydoun, Maryam Romio"
 
 
 def load_notebook_namespace() -> dict:
@@ -23,71 +23,72 @@ def load_notebook_namespace() -> dict:
     return ns
 
 
+def paragraph_block(paragraphs: list[str]) -> str:
+    return "\n".join(f"<p>{p}</p>" for p in paragraphs)
+
+
 def main() -> None:
     ns = load_notebook_namespace()
     alt = ns["alt"]
-    map_spec = ns["state_map"].to_dict()
     state_metrics = ns["state_metrics"]
     region_palette = ns["region_palette"]
-    paper = ns["paper"]
-    ink = ns["ink"]
-    base_config = ns["base_config"]
     timeline = ns["timeline"]
     heatmap = ns["heatmap"]
     state_line = ns["state_line"]
     state_decades = ns["state_decades"]
+    map_spec = ns["state_map"].to_dict()
+
+    um_blue = "#00274C"
+    um_maize = "#FFCB05"
+    um_slate = "#4A5A70"
+    um_line = "#D9E1EA"
+    panel_bg = "#FFFFFF"
+
+    public_config = {
+        "background": panel_bg,
+        "title": {"color": um_blue, "fontSize": 22, "font": "Merriweather"},
+        "axis": {
+            "labelColor": um_blue,
+            "titleColor": um_blue,
+            "gridColor": um_line,
+            "labelFont": "IBM Plex Sans",
+            "titleFont": "IBM Plex Sans",
+        },
+        "legend": {
+            "labelColor": um_blue,
+            "titleColor": um_blue,
+            "labelFont": "IBM Plex Sans",
+            "titleFont": "IBM Plex Sans",
+        },
+        "view": {"stroke": None},
+    }
 
     public_hero = (
         (
-            timeline.properties(width=1120, height=110)
-            & heatmap.properties(width=1080, height=650)
+            timeline.properties(width=1100, height=120)
+            & heatmap.properties(width=1060, height=660)
             & (
-                state_line.properties(width=540, height=170)
-                | state_decades.properties(width=540, height=170)
+                state_line.properties(width=540, height=175)
+                | state_decades.properties(width=540, height=175)
             )
         )
         .resolve_scale(color="independent", size="independent")
-        .configure(**base_config)
+        .configure(**public_config)
         .configure_legend(
             orient="bottom",
             direction="horizontal",
-            gradientLength=320,
-            gradientThickness=14,
+            gradientLength=360,
+            gradientThickness=16,
             titleAnchor="start",
-            labelLimit=120,
+            labelLimit=130,
         )
     )
     hero_spec = public_hero.to_dict()
 
-    community_scatter_base = (
-        alt.Chart(state_metrics)
-        .mark_circle(opacity=0.88, stroke=paper, strokeWidth=1.3)
-        .encode(
-            x=alt.X("avg_annual:Q", title="Average annual tornadoes (1951-2019)"),
-            y=alt.Y("growth_delta:Q", title="Increase from 1950s average to 2010s average"),
-            size=alt.Size("total_count:Q", title="Total tornadoes"),
-            color=alt.Color("region:N", scale=alt.Scale(range=region_palette), title="Region"),
-            tooltip=[
-                alt.Tooltip("States:N", title="State"),
-                alt.Tooltip("region:N", title="Region"),
-                alt.Tooltip("avg_annual:Q", title="Avg annual", format=".1f"),
-                alt.Tooltip("growth_delta:Q", title="Growth", format=".1f"),
-                alt.Tooltip("volatility:Q", title="Volatility", format=".1f"),
-                alt.Tooltip("total_count:Q", title="Total tornadoes", format=".0f"),
-            ],
-        )
-    )
-
-    zoom_window = alt.selection_interval(
-        name="zoom_window",
-        bind="scales",
-        encodings=["x", "y"],
-    )
-
-    community_scatter_labels = (
+    static_labels = (
         alt.Chart(state_metrics)
         .transform_filter("datum.label != ''")
-        .mark_text(align="left", dx=8, dy=-5, fontSize=11, color=ink)
+        .mark_text(align="left", dx=8, dy=-6, fontSize=11, color=um_blue)
         .encode(
             x="avg_annual:Q",
             y="growth_delta:Q",
@@ -95,49 +96,141 @@ def main() -> None:
         )
     )
 
-    zoom_labels = (
-        alt.Chart(state_metrics)
-        .transform_filter("datum.label == ''")
-        .transform_filter(zoom_window)
-        .transform_window(
-            visible_rank="rank()",
-            sort=[alt.SortField("total_count", order="descending")],
-        )
-        .transform_filter("datum.visible_rank <= 18")
-        .mark_text(align="left", dx=8, dy=10, fontSize=11, color=ink)
-        .encode(
-            x="avg_annual:Q",
-            y="growth_delta:Q",
-            text="States:N",
-        )
-    )
-
     community_scatter = (
-        (community_scatter_base + community_scatter_labels + zoom_labels)
-        .add_params(zoom_window)
+        (
+            alt.Chart(state_metrics)
+            .mark_circle(opacity=0.9, stroke=panel_bg, strokeWidth=1.4)
+            .encode(
+                x=alt.X("avg_annual:Q", title="Average annual tornadoes (1951-2019)"),
+                y=alt.Y("growth_delta:Q", title="Increase from 1950s average to 2010s average"),
+                size=alt.Size("total_count:Q", title="Total tornadoes"),
+                color=alt.Color(
+                    "region:N",
+                    scale=alt.Scale(range=region_palette),
+                    title="Region",
+                ),
+                tooltip=[
+                    alt.Tooltip("States:N", title="State"),
+                    alt.Tooltip("region:N", title="Region"),
+                    alt.Tooltip("avg_annual:Q", title="Average annual tornadoes", format=".1f"),
+                    alt.Tooltip("growth_delta:Q", title="Growth since 1950s", format=".1f"),
+                    alt.Tooltip("volatility:Q", title="Volatility", format=".1f"),
+                    alt.Tooltip("total_count:Q", title="Total tornadoes", format=".0f"),
+                ],
+            )
+            + static_labels
+        )
         .properties(
-            width=980,
-            height=580,
+            width=920,
+            height=560,
             title=alt.TitleParams(
                 text="Exposure vs. Acceleration",
-                subtitle="This view is zoomable and pannable. Drag to pan, use your trackpad or mouse wheel to zoom, and double-click to reset. More state labels appear automatically as you zoom in.",
+                subtitle="Drag to pan, use your trackpad or mouse wheel to zoom, and double-click to reset.",
                 anchor="start",
             ),
         )
-        .configure(**base_config)
+        .interactive()
+        .configure(**public_config)
     )
-
     scatter_spec = community_scatter.to_dict()
 
+    map_spec["config"] = public_config
     map_spec["params"] = [
-        {
-            **param,
-            "value": 1951,
-        }
-        if param.get("name") == "map_year"
-        else param
+        {**param, "value": 1951} if param.get("name") == "map_year" else param
         for param in map_spec.get("params", [])
     ]
+
+    intro_copy = [
+        "For decades, tornado risk in the United States has been associated with a narrow corridor across the Great Plains, commonly known as “Tornado Alley.” But when we step back and examine long-term data, a more complex story emerges.",
+        "Tornado activity is not only persistent, but it is shifting, expanding, and redistributing across regions over time. This explorable analysis lets you trace those changes across decades, states, and geographic patterns.",
+    ]
+
+    first_section_copy = [
+        "The timeline below shows the national “pulse” of tornado activity since the 1950s. While year-to-year variation is expected, the broader pattern reveals that tornado activity remains consistently present over time.",
+        "But the bigger story emerges when we look beyond the national average. The heatmap below shows how tornado activity accumulates across individual states over time. As you scan across decades, notice how activity becomes more widespread—especially outside the traditional Great Plains core.",
+    ]
+
+    heatmap_copy = [
+        "Each row represents a state, and each column represents a year. Brighter colors indicate higher tornado counts. Instead of focusing on a single location, this view reveals how activity spreads and shifts across the entire country."
+    ]
+
+    state_detail_copy = [
+        "Try selecting a state to follow its long-term trajectory. Some states, particularly in the Southeast, show increasing activity over time, suggesting that tornado risk is expanding beyond its historical core."
+    ]
+
+    scatter_intro_copy = [
+        "Not all states are changing in the same way. Some have long experienced frequent tornado activity, while others are seeing faster growth in recent decades.",
+        "This chart compares long-term exposure (average annual tornadoes) with recent acceleration (how much activity has increased over time). Together, these dimensions reveal which states are not just active—but becoming more at risk.",
+    ]
+
+    scatter_side_copy = [
+        "States farther to the right have historically higher tornado activity. States higher up have experienced the greatest increases in recent decades.",
+        "Notice how several Southeastern states appear high on the chart despite not being part of the traditional Tornado Alley. This highlights a key shift: tornado risk is growing fastest outside its historical core.",
+    ]
+
+    map_intro_copy = [
+        "To fully understand how tornado geography is changing, it helps to watch it unfold over time.",
+        "Use the slider below to move through the years and observe how the center of activity evolves. Earlier decades show a strong concentration in the Great Plains, but over time, activity spreads eastward and becomes more diffuse.",
+        "This shift is gradual rather than abrupt—what was once a concentrated corridor is becoming a broader national pattern.",
+    ]
+
+    meaning_copy = [
+        "Taken together, these patterns challenge the long-standing idea of a fixed Tornado Alley. Instead, tornado activity in the United States appears to be evolving, both in where it occurs and how it changes over time.",
+        "While the Great Plains remain a central region of activity, increasing frequency and growth in the Southeast and other regions suggest a broader redistribution of risk. In many ways, our understanding of tornado geography has not kept pace with the data.",
+        "This gap is especially important when considering infrastructure and preparedness. Storm shelters, tornado siren systems, building codes, and public awareness efforts have historically been concentrated in the Great Plains, where tornado risk was assumed to be highest. As activity expands into regions like the Southeast, where population density is higher and protective infrastructure is often less widespread, communities may be more vulnerable to severe weather impacts.",
+        "Understanding these changes is critical, not just for interpreting past trends, but for preparing for future exposure. Expanding access to storm shelters, improving tornado siren coverage, and strengthening building standards outside the traditional Tornado Alley will be essential as the geography of risk continues to shift.",
+    ]
+
+    project_notes = [
+        (
+            "What is Tornado Alley and How Is it Shifting?",
+            "For a long time, people have had a pretty clear idea of where tornadoes happen in the United States. When you hear the term Tornado Alley, you probably think of the Great Plains, especially states like Texas, Oklahoma, and Kansas. It has been treated as a fixed region where tornado risk is concentrated and expected.",
+        ),
+        (
+            "Why simple counts are not enough",
+            "Most analyses focus on how many tornadoes happen each year. That is a useful starting point, but it misses some important context. Total counts do not show where tornadoes are happening or how consistent that activity is over time.",
+        ),
+        (
+            "Project approach",
+            "In this project, we focused on three things: where tornadoes are happening, how often they occur, and how much that changes from year to year. Looking at all three together gives a better sense of how tornado activity is actually evolving across the country.",
+        ),
+        (
+            "Final takeaway",
+            "Overall, while Tornado Alley is still a useful concept, it no longer tells the full story. Tornado activity in the United States is not just concentrated in one region. Understanding that shift matters for how we think about preparedness, infrastructure, and long-term risk.",
+        ),
+    ]
+
+    overview_cards = [
+        (
+            "Project Goal",
+            "Through interactive maps and timelines, users can explore changes in location, frequency, and seasonality, revealing the eastward shift of Tornado Alley and growing unpredictability of severe weather.",
+        ),
+        ("Project Type", "Explorable explainers"),
+        (
+            "Reading Strategy",
+            "Start with the national pulse and pressure wall, then compare exposure and acceleration across states, and finally use the map to watch the geography shift over time.",
+        ),
+    ]
+
+    notes_html = "\n".join(
+        f"""
+        <div class="note-card">
+          <h3>{title}</h3>
+          <p>{body}</p>
+        </div>
+        """
+        for title, body in project_notes
+    )
+
+    overview_html = "\n".join(
+        f"""
+        <div class="overview-card">
+          <h3>{title}</h3>
+          <p>{body}</p>
+        </div>
+        """
+        for title, body in overview_cards
+    )
 
     html = f"""<!DOCTYPE html>
 <html lang="en">
@@ -145,190 +238,220 @@ def main() -> None:
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>{PROJECT_TITLE}</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=Merriweather:wght@400;700&display=swap" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/vega@5"></script>
   <script src="https://cdn.jsdelivr.net/npm/vega-lite@5"></script>
   <script src="https://cdn.jsdelivr.net/npm/vega-embed@6"></script>
   <style>
     :root {{
-      --paper: #f6f1e7;
-      --ink: #1f1d1a;
-      --accent: #e4572e;
-      --grid: #d8ccb8;
+      --um-blue: #00274C;
+      --um-maize: #FFCB05;
+      --um-slate: #4A5A70;
+      --um-line: #D9E1EA;
+      --um-panel: #FFFFFF;
+      --um-bg: #F7F9FC;
     }}
     * {{
       box-sizing: border-box;
     }}
     body {{
       margin: 0;
-      font-family: "Georgia", serif;
-      color: var(--ink);
-      background:
-        radial-gradient(circle at top right, rgba(228,87,46,0.14), transparent 24%),
-        radial-gradient(circle at 15% 10%, rgba(243,167,18,0.11), transparent 18%),
-        linear-gradient(180deg, #fbf8f1 0%, var(--paper) 100%);
-      line-height: 1.5;
+      font-family: "IBM Plex Sans", Arial, Helvetica, sans-serif;
+      color: var(--um-blue);
+      background: #ffffff;
+      line-height: 1.6;
     }}
-    a {{
-      color: var(--accent);
+    .brandbar {{
+      background: var(--um-blue);
+      color: #ffffff;
+      border-bottom: 6px solid var(--um-maize);
+    }}
+    .brandbar-inner {{
+      max-width: 1320px;
+      margin: 0 auto;
+      padding: 16px 24px 14px;
+      font-size: 0.95rem;
+      font-weight: 600;
+      letter-spacing: 0.02em;
     }}
     main {{
       max-width: 1320px;
       margin: 0 auto;
-      padding: 0 24px 80px;
-    }}
-    h1 {{
-      margin: 0 0 10px;
-      max-width: 1100px;
-      font-size: clamp(2.6rem, 5vw, 5.2rem);
-      line-height: 0.95;
-      letter-spacing: -0.03em;
+      padding: 0 24px 72px;
     }}
     .hero {{
-      padding-top: 42px;
+      padding: 38px 0 26px;
+      border-bottom: 1px solid var(--um-line);
     }}
     .kicker {{
-      margin: 0 0 12px;
-      font-family: Helvetica, Arial, sans-serif;
+      margin: 0 0 10px;
+      color: var(--um-slate);
       font-size: 0.82rem;
       font-weight: 700;
-      letter-spacing: 0.1em;
+      letter-spacing: 0.12em;
       text-transform: uppercase;
-      color: rgba(31,29,26,0.7);
+    }}
+    h1 {{
+      margin: 0 0 12px;
+      font-family: "Merriweather", Georgia, "Times New Roman", serif;
+      font-size: clamp(2.4rem, 4.8vw, 4.5rem);
+      line-height: 1.02;
+      letter-spacing: -0.03em;
+      max-width: 980px;
     }}
     h2 {{
       margin: 0 0 10px;
-      font-size: clamp(1.6rem, 2.4vw, 2.4rem);
+      font-family: "Merriweather", Georgia, "Times New Roman", serif;
+      font-size: clamp(1.55rem, 2.2vw, 2.2rem);
+      line-height: 1.15;
       letter-spacing: -0.02em;
     }}
+    h3 {{
+      margin: 0 0 8px;
+      font-family: "Merriweather", Georgia, "Times New Roman", serif;
+      font-size: 1.02rem;
+      line-height: 1.2;
+    }}
+    p {{
+      margin: 0 0 14px;
+    }}
     .lede {{
-      max-width: 930px;
-      font-family: Helvetica, Arial, sans-serif;
+      max-width: 920px;
       font-size: 1.08rem;
-      color: rgba(31,29,26,0.84);
-      margin-bottom: 30px;
+      color: var(--um-slate);
+    }}
+    .meta-grid,
+    .overview,
+    .notes-grid {{
+      display: grid;
+      gap: 16px;
     }}
     .meta-grid {{
-      display: grid;
       grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-      gap: 14px;
-      margin: 18px 0 10px;
+      margin-top: 22px;
     }}
-    .meta-card {{
-      background: rgba(255,255,255,0.58);
-      border: 1px solid rgba(216,204,184,0.8);
-      border-radius: 16px;
-      padding: 14px 16px;
-      font-family: Helvetica, Arial, sans-serif;
+    .overview {{
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      margin-top: 24px;
+    }}
+    .notes-grid {{
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    }}
+    .meta-card,
+    .overview-card,
+    .note-card,
+    .callout,
+    .panel,
+    .text-panel {{
+      background: var(--um-panel);
+      border: 1px solid var(--um-line);
+      border-radius: 8px;
+      box-shadow: none;
+    }}
+    .meta-card,
+    .overview-card,
+    .note-card,
+    .callout,
+    .text-panel {{
+      padding: 18px 18px 16px;
+    }}
+    .meta-card,
+    .overview-card,
+    .note-card {{
+      border-top: 4px solid var(--um-maize);
     }}
     .meta-card strong {{
       display: block;
-      font-size: 0.82rem;
-      letter-spacing: 0.06em;
-      text-transform: uppercase;
-      color: rgba(31,29,26,0.62);
       margin-bottom: 4px;
+      font-size: 0.8rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--um-slate);
     }}
-    .panel {{
-      background: rgba(255,255,255,0.54);
-      border: 1px solid rgba(216,204,184,0.8);
-      border-radius: 22px;
-      padding: 24px 22px;
-      box-shadow: 0 20px 56px rgba(76, 61, 46, 0.08);
-      margin-top: 22px;
-      overflow: hidden;
+    .section {{
+      margin-top: 42px;
     }}
     .section-copy {{
-      max-width: 760px;
-      margin: 4px 0 14px;
-      font-family: Helvetica, Arial, sans-serif;
-      color: rgba(31,29,26,0.82);
+      max-width: 860px;
+      color: var(--um-slate);
+      margin-bottom: 10px;
+    }}
+    .panel {{
+      padding: 22px 20px;
+      margin-top: 18px;
+      overflow: hidden;
+    }}
+    .text-panel {{
+      margin-top: 14px;
+    }}
+    .story-divider {{
+      width: 72px;
+      height: 6px;
+      margin: 10px 0 20px;
+      background: var(--um-maize);
+      border-radius: 0;
     }}
     .split {{
       display: grid;
-      grid-template-columns: minmax(0, 1.35fr) minmax(280px, 0.65fr);
+      grid-template-columns: minmax(0, 1.45fr) minmax(300px, 0.55fr);
       gap: 18px;
       align-items: start;
-    }}
-    .callout {{
-      background: rgba(255,255,255,0.58);
-      border: 1px solid rgba(216,204,184,0.8);
-      border-radius: 18px;
-      padding: 18px 18px 16px;
-      font-family: Helvetica, Arial, sans-serif;
-    }}
-    .callout p {{
-      margin: 0 0 10px;
-      color: rgba(31,29,26,0.82);
-    }}
-    .callout p:last-child {{
-      margin-bottom: 0;
     }}
     .vega-embed summary {{
       display: none;
     }}
-    .vega-embed {{
-      width: 100%;
-    }}
+    .vega-embed,
     .vega-embed > div {{
       width: 100%;
     }}
-    .section {{
-      margin-top: 28px;
-    }}
-    .overview {{
-      display: grid;
-      grid-template-columns: repeat(3, minmax(0, 1fr));
-      gap: 16px;
-      margin-top: 20px;
-    }}
-    .overview-card {{
-      background: rgba(255,255,255,0.58);
-      border: 1px solid rgba(216,204,184,0.8);
-      border-radius: 18px;
-      padding: 18px 18px 16px;
-      font-family: Helvetica, Arial, sans-serif;
-    }}
-    .overview-card h3 {{
-      margin: 0 0 8px;
-      font-size: 1rem;
-      color: var(--ink);
-    }}
-    .overview-card p {{
-      margin: 0;
-      color: rgba(31,29,26,0.82);
-      font-size: 0.95rem;
+    .lede,
+    .section-copy,
+    .text-panel p,
+    .callout p,
+    .overview-card p,
+    .note-card p,
+    .meta-card span,
+    footer {{
+      max-width: 75ch;
     }}
     footer {{
       margin-top: 30px;
-      font-family: Helvetica, Arial, sans-serif;
-      font-size: 0.92rem;
-      color: rgba(31,29,26,0.7);
+      padding-top: 18px;
+      border-top: 1px solid var(--um-line);
+      color: var(--um-slate);
+      font-size: 0.93rem;
     }}
     @media (max-width: 980px) {{
       .split {{
-        grid-template-columns: 1fr;
-      }}
-      .overview {{
         grid-template-columns: 1fr;
       }}
       .panel {{
         padding: 18px 14px;
       }}
       main {{
-        padding: 0 14px 64px;
+        padding: 0 14px 56px;
+      }}
+      .brandbar-inner {{
+        padding: 14px 14px 12px;
       }}
     }}
   </style>
 </head>
 <body>
+  <div class="brandbar">
+    <div class="brandbar-inner">University of Michigan | School of Information</div>
+  </div>
   <main>
     <section class="hero">
       <p class="kicker">Final Narrative Visualization Project</p>
       <h1>{PROJECT_TITLE}</h1>
+      <div class="story-divider"></div>
       <p class="lede">
         This site presents our team’s final narrative visualization project on tornado activity across the United States from 1951 to 2019.
-        Our goal is to show that the national tornado story is not only about a fixed Plains corridor, but also about regional change, concentration, and expansion over time.
       </p>
+      {paragraph_block(intro_copy)}
       <div class="meta-grid">
         <div class="meta-card">
           <strong>Course</strong>
@@ -340,79 +463,67 @@ def main() -> None:
         </div>
       </div>
       <div class="overview">
-        <div class="overview-card">
-          <h3>Project Goal</h3>
-          <p>Show how tornado activity accumulates, shifts, and intensifies across states over time through an interactive narrative rather than a single static map.</p>
-        </div>
-        <div class="overview-card">
-          <h3>What To Look For</h3>
-          <p>Compare the long-run dominance of the Great Plains with the growing prominence of the Southeast and the changing rank order of states across decades.</p>
-        </div>
-        <div class="overview-card">
-          <h3>How To Read</h3>
-          <p>Start with the main dashboard, then zoom into the exposure chart for smaller states, and finally use the map slider to inspect year-by-year geographic change.</p>
-        </div>
+        {overview_html}
       </div>
     </section>
 
     <section class="section">
       <h2>1. National Pattern and State Detail</h2>
+      <div class="story-divider"></div>
       <p class="section-copy">
-        This opening dashboard is the main entry point for the project. Use the national pulse to focus an era, read the pressure wall as a state-by-year texture of activity, and compare the selected state’s long-run trend with its decade totals.
+        This opening dashboard is the main entry point for the project. It is designed to give a broad overview of tornado activity across the country.
       </p>
+      {paragraph_block(first_section_copy)}
+      <div class="text-panel">
+        {paragraph_block(heatmap_copy)}
+      </div>
       <div class="panel">
         <div id="hero-dashboard"></div>
+      </div>
+      <div class="text-panel">
+        {paragraph_block(state_detail_copy)}
       </div>
     </section>
 
     <section class="section">
       <h2>2. Exposure and Acceleration</h2>
-      <p class="section-copy">
-        This dedicated view isolates the relationship between long-run exposure and recent growth. It gives the smaller-state cluster enough space to inspect closely, which is difficult to do in a compressed multi-panel dashboard.
-      </p>
+      <div class="story-divider"></div>
+      {paragraph_block(scatter_intro_copy)}
       <div class="split">
         <div class="panel">
           <div id="zoom-scatter"></div>
         </div>
         <aside class="callout">
-          <p><strong>Reading tip</strong></p>
-          <p>States far to the right have high long-run exposure. States higher up have increased more sharply from the 1950s to the 2010s.</p>
-          <p>The quiet cluster in the lower-left matters too: these are states with comparatively low annual averages and limited long-run growth, and they become much easier to examine once you zoom in.</p>
-          <p>Double-click inside the chart to reset the zoom.</p>
+          {paragraph_block(scatter_side_copy)}
         </aside>
       </div>
     </section>
 
     <section class="section">
       <h2>3. State-by-State Geographic Shift</h2>
-      <p class="section-copy">
-        The slider map works as a companion view to the analytical panels above. Move through the years to watch how the center of tornado activity broadens, spikes, and migrates across the country.
-      </p>
+      <div class="story-divider"></div>
+      {paragraph_block(map_intro_copy)}
       <div class="panel">
         <div id="state-map"></div>
       </div>
     </section>
 
     <section class="section">
-      <h2>4. Project Notes</h2>
-      <div class="overview">
-        <div class="overview-card">
-          <h3>Dataset</h3>
-          <p>The visualizations are built from annual state-level tornado counts spanning 1951 to 2019, allowing both long-run comparisons and decade-level narrative framing.</p>
-        </div>
-        <div class="overview-card">
-          <h3>Narrative Choice</h3>
-          <p>We structured the project as a sequence: first establish the national pattern, then isolate a key analytical relationship, and finally provide a geographic playback view.</p>
-        </div>
-        <div class="overview-card">
-          <h3>Team Presentation Use</h3>
-          <p>This format is designed to support a final class presentation as well as a browsable standalone web page that preserves Altair interactivity.</p>
-        </div>
+      <h2>4. What This Means</h2>
+      <div class="story-divider"></div>
+      {paragraph_block(meaning_copy)}
+    </section>
+
+    <section class="section">
+      <h2>5. Project Notes</h2>
+      <div class="story-divider"></div>
+      <div class="notes-grid">
+        {notes_html}
       </div>
     </section>
 
     <footer>
-      Export generated from the notebook and dataset in this project folder. For GitHub Pages, publish this file as <code>index.html</code>.
+      Built for {COURSE_LABEL}. Published as an interactive GitHub Pages site using Altair and Vega-Lite.
     </footer>
   </main>
 
